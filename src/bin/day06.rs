@@ -3,16 +3,7 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 
-pub fn print_map(map: &Array2D<char>) {
-    for row in map.rows_iter() {
-        for element in row {
-            print!("{}", element);
-        }
-        println!();
-    }
-}
-
-pub fn find_guard(map: &Array2D<char>) -> (i32, i32) {
+fn find_guard(map: &Array2D<char>) -> (i32, i32) {
     for row in 0..map.num_rows() {
         for col in 0..map.num_columns() {
             if !(map[(row, col)] == '.' || map[(row, col)] == '#') {
@@ -23,7 +14,7 @@ pub fn find_guard(map: &Array2D<char>) -> (i32, i32) {
     panic!("No guard found");
 }
 
-pub fn move_guard(map: &Array2D<char>,
+fn move_guard(map: &Array2D<char>,
                   location: &(i32, i32),
                   step: &(i32, i32),
                   visited: &mut HashSet<(i32, i32)>) -> Option<(i32, i32)> {
@@ -46,14 +37,14 @@ pub fn move_guard(map: &Array2D<char>,
 }
 
 
-pub enum CycleResult {
+enum CycleResult {
     OutOfBounds,
     NewLocation((i32, i32)),
     Cycle,
 }
 
 
-pub fn move_guard_with_step(map: &Array2D<char>,
+fn move_guard_with_step(map: &Array2D<char>,
                             location: &(i32, i32),
                             step: &(i32, i32),
                             visited: &mut HashSet<((i32, i32), (i32, i32))>) -> CycleResult {
@@ -79,7 +70,7 @@ pub fn move_guard_with_step(map: &Array2D<char>,
 }
 
 
-pub fn test_for_cycle(map: &Array2D<char>,
+fn test_for_cycle(map: &Array2D<char>,
                       initial_location: &(i32, i32)) -> bool {
     // Initial location and direction
     let mut location = initial_location.clone();
@@ -102,7 +93,7 @@ pub fn test_for_cycle(map: &Array2D<char>,
     false
 }
 
-pub fn turn_right(step: &(i32, i32)) -> (i32, i32) {
+fn turn_right(step: &(i32, i32)) -> (i32, i32) {
     if *step == (-1, 0) {
         (0, 1)
     } else if *step == (1, 0) {
@@ -117,7 +108,7 @@ pub fn turn_right(step: &(i32, i32)) -> (i32, i32) {
 }
 
 
-pub fn find_locations(map: &Array2D<char>,
+fn find_locations(map: &Array2D<char>,
                       initial_location: &(i32, i32)) -> HashSet<(i32, i32)> {
     // Initial location
     let mut location = initial_location.clone();
@@ -139,7 +130,7 @@ pub fn find_locations(map: &Array2D<char>,
     visited
 }
 
-pub fn part1(map: &Array2D<char>) {
+fn part1(map: &Array2D<char>) {
     // Initial location
     let initial_location = find_guard(&map);
 
@@ -150,7 +141,7 @@ pub fn part1(map: &Array2D<char>) {
     println!("Part 1: {}", visited.len());
 }
 
-pub fn part2(map: &Array2D<char>) {
+fn part2(map: &Array2D<char>) {
     // Initial location
     let initial_location = find_guard(&map);
 
