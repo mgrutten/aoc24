@@ -74,6 +74,7 @@ fn part2(disk: &Vec<u32>) {
             empty_index += 1;
         }
 
+        // No possible swap
         if empty_index == bwd_index {
             bwd_index -= 1;
             continue;
