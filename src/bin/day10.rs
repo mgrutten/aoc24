@@ -13,7 +13,7 @@ fn increment(location: (i32, i32), direction: (i32, i32), size: (i32, i32)) -> O
     }
 }
 
-fn count_paths(map: &Array2D<u32>, location: (i32, i32), height: u32) -> HashSet<(i32, i32)> {
+fn count_paths(map: &Array2D<u8>, location: (i32, i32), height: u8) -> HashSet<(i32, i32)> {
     if height == 9 {
         let mut paths = HashSet::new();
         paths.insert(location);
@@ -36,7 +36,7 @@ fn count_paths(map: &Array2D<u32>, location: (i32, i32), height: u32) -> HashSet
 }
 
 
-fn count_all_paths(map: &Array2D<u32>, location: (i32, i32), height: u32) -> i32 {
+fn count_all_paths(map: &Array2D<u8>, location: (i32, i32), height: u8) -> i32 {
     if height == 9 {
         return 1;
     }
@@ -57,7 +57,7 @@ fn count_all_paths(map: &Array2D<u32>, location: (i32, i32), height: u32) -> i32
 }
 
 
-fn find_trailheads(map: &Array2D<u32>) -> HashSet<(i32, i32)> {
+fn find_trailheads(map: &Array2D<u8>) -> HashSet<(i32, i32)> {
     let mut trailheads = HashSet::new();
     for row in 0..map.num_rows() {
         for col in 0..map.num_columns() {
@@ -71,14 +71,14 @@ fn find_trailheads(map: &Array2D<u32>) -> HashSet<(i32, i32)> {
 }
 
 
-fn part1(map: &Array2D<u32>) {
+fn part1(map: &Array2D<u8>) {
     let path_total = find_trailheads(map).into_iter()
         .fold(0, |acc, trailhead| acc + count_paths(map, trailhead, 0).len());
 
     println!("Part 1: {}", path_total);
 }
 
-fn part2(map: &Array2D<u32>) {
+fn part2(map: &Array2D<u8>) {
     let path_total = find_trailheads(map).into_iter()
         .fold(0, |acc, trailhead| acc + count_all_paths(map, trailhead, 0));
 
@@ -92,8 +92,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_str: String = fs::read_to_string("data/day10/day10.txt")?;
 
     let map_vec = file_str.lines()
-        .map(|line| line.chars().map(|c| c as u32 - '0' as u32).collect())
-        .collect::<Vec<Vec<u32>>>();
+        .map(|line| line.bytes().map(|b| b - '0' as u8).collect())
+        .collect::<Vec<Vec<u8>>>();
     let map = Array2D::from_rows(&map_vec).unwrap();
 
     part1(&map);
