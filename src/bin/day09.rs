@@ -2,13 +2,13 @@ use std::error::Error;
 use std::fs;
 
 fn part1(disk: &Vec<u32>) {
-    let disk_len = disk.iter().sum::<u32>();
+    let disk_len = disk.into_iter().sum::<u32>();
 
     // Decode disk
     let mut decoded: Vec<Option<u32>> = vec![None; disk_len as usize];
 
     let mut index = 0;
-    for (disk_index, val) in disk.iter().enumerate() {
+    for (disk_index, val) in disk.into_iter().enumerate() {
         if disk_index % 2 == 0 {
             for i in 0..*val {
                 decoded[(index + i) as usize] = Some(disk_index as u32 / 2);
@@ -53,7 +53,7 @@ fn part2(disk: &Vec<u32>) {
     // Decode disk into blocks (size, value)
     let mut blocks = Vec::new();
 
-    for (disk_index, val) in disk.iter().enumerate() {
+    for (disk_index, val) in disk.into_iter().enumerate() {
         if disk_index % 2 == 0 {
             blocks.push((*val, Some(disk_index as u32 / 2)));
         } else {
@@ -94,7 +94,7 @@ fn part2(disk: &Vec<u32>) {
     // Form checksum from blocks
     let mut index = 0;
     let mut checksum: u64 = 0;
-    for block in blocks.iter() {
+    for block in blocks.into_iter() {
         if block.1.is_some() {
             for i in 0..block.0 {
                 checksum += (index + i) as u64 * block.1.unwrap() as u64;

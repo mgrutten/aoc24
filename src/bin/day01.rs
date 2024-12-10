@@ -11,7 +11,7 @@ pub fn part1(col1: &Vec<i32>, col2: &Vec<i32>) {
     col2_sorted.sort();
 
     // Add up differences
-    let dist = col1_sorted.iter().zip(col2_sorted.iter())
+    let dist = col1_sorted.into_iter().zip(col2_sorted.into_iter())
         .fold(0, |acc, (a, b)| acc + (a - b).abs());
 
     println!("Part 1: {}", dist);
@@ -21,11 +21,11 @@ pub fn part1(col1: &Vec<i32>, col2: &Vec<i32>) {
 pub fn part2(col1: &Vec<i32>, col2: &Vec<i32>) {
     // Count up distinct values in col2
     let mut col2_map = HashMap::new();
-    col2.iter()
+    col2.into_iter()
         .for_each(|val| *col2_map.entry(val).or_insert(0) += 1);
 
     // Sum up matches from col1
-    let similarity = col1.iter()
+    let similarity = col1.into_iter()
         .fold(0, |acc, val| acc + val * col2_map.get(val).unwrap_or(&0));
 
     println!("Part 2: {:?}", similarity);

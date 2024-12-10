@@ -72,15 +72,15 @@ fn find_trailheads(map: &Array2D<u32>) -> HashSet<(i32, i32)> {
 
 
 fn part1(map: &Array2D<u32>) {
-    let path_total = find_trailheads(map).iter()
-        .fold(0, |acc, trailhead| acc + count_paths(map, *trailhead, 0).len());
+    let path_total = find_trailheads(map).into_iter()
+        .fold(0, |acc, trailhead| acc + count_paths(map, trailhead, 0).len());
 
     println!("Part 1: {}", path_total);
 }
 
 fn part2(map: &Array2D<u32>) {
-    let path_total = find_trailheads(map).iter()
-        .fold(0, |acc, trailhead| acc + count_all_paths(map, *trailhead, 0));
+    let path_total = find_trailheads(map).into_iter()
+        .fold(0, |acc, trailhead| acc + count_all_paths(map, trailhead, 0));
 
     println!("Part 2: {}", path_total);
 }
