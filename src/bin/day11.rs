@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 
@@ -39,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stones = file_str.split_ascii_whitespace()
         .map(|s| s.parse::<u64>().unwrap())
         .collect::<Vec<u64>>();
-    
+
     part1(&stones);
 
     Ok(())
