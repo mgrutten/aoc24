@@ -1,8 +1,21 @@
 use array2d::Array2D;
 use petgraph::algo::kosaraju_scc;
 use petgraph::{Graph, Undirected};
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
+use std::ops::Add;
+
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+struct Location(i32, i32);
+
+impl Add for Location {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Location(self.0 + other.0, self.1 + other.1)
+    }
+}
 
 
 fn part1(map: &Array2D<char>) {
@@ -58,12 +71,12 @@ fn part1(map: &Array2D<char>) {
 
 fn part2(map: &Array2D<char>) {
     // Undirected graph
-    let mut graph: Graph<(usize, usize), (), Undirected> = Graph::new_undirected();
+    let mut graph: Graph<Location, (), Undirected> = Graph::new_undirected();
 
     // Node for each element in the graph
     let nodes = map.rows_iter().enumerate()
         .map(|(ri, row)| row.enumerate()
-            .map(|(ci, _)| graph.add_node((ri, ci)))
+            .map(|(ci, _)| graph.add_node(Location(ri as i32, ci as i32)))
             .collect::<Vec<_>>())
         .collect::<Vec<_>>();
     let node_map = Array2D::from_rows(&nodes).unwrap();
@@ -93,62 +106,40 @@ fn part2(map: &Array2D<char>) {
     // Find connected components
     let components = kosaraju_scc(&graph);
 
+    let corners = vec![
+        (Location(-1, 0), Location(0, -1), Location(-1, -1)),
+        (Location(-1, 0), Location(0, 1), Location(-1, 1)),
+        (Location(1, 0), Location(0, -1), Location(1, -1)),
+        (Location(1, 0), Location(0, 1), Location(1, 1)),
+    ];
+
     // Add up the price
     let mut price = 0;
     for component in components {
         // Area is the number of components
         let area = component.len();
 
+        // Grid locations in this component
+        let locations = component.iter()
+            .map(|index| *graph.node_weight(*index).unwrap())
+            .collect::<HashSet<_>>();
+
         // Perimeter is the number of sides (= number of corners)
-        let val = map[*graph.node_weight(component[0]).unwrap()];
         let mut corner_count = 0;
-        for index in component {
-            let location = graph.node_weight(index).unwrap();
+        for location in locations.iter() {
+            for corner in corners.iter() {
+                // Outside corner
+                if !locations.contains(&(*location + corner.0)) &&
+                    !locations.contains(&(*location + corner.1)) {
+                    corner_count += 1;
+                }
 
-            // Outside corners
-            if (location.0 == 0 || map[(location.0 - 1, location.1)] != val) &&
-                (location.1 == 0 || map[(location.0, location.1 - 1)] != val) {
-                corner_count += 1;
-            }
-
-            if (location.0 == 0 || map[(location.0 - 1, location.1)] != val) &&
-                (location.1 == map.num_columns() - 1 || map[(location.0, location.1 + 1)] != val) {
-                corner_count += 1;
-            }
-
-            if (location.0 == map.num_rows() - 1 || map[(location.0 + 1, location.1)] != val) &&
-                (location.1 == 0 || map[(location.0, location.1 - 1)] != val) {
-                corner_count += 1;
-            }
-
-            if (location.0 == map.num_rows() - 1 || map[(location.0 + 1, location.1)] != val) &&
-                (location.1 == map.num_columns() - 1 || map[(location.0, location.1 + 1)] != val) {
-                corner_count += 1;
-            }
-
-            // Inside corners
-            if location.0 > 0 && map[(location.0 - 1, location.1)] == val &&
-                location.1 > 0 && map[(location.0, location.1 - 1)] == val &&
-                map[(location.0 - 1, location.1 - 1)] != val {
-                corner_count += 1;
-            }
-
-            if location.0 > 0 && map[(location.0 - 1, location.1)] == val &&
-                location.1 < map.num_columns() - 1 && map[(location.0, location.1 + 1)] == val &&
-                map[(location.0 - 1, location.1 + 1)] != val {
-                corner_count += 1;
-            }
-
-            if location.0 < map.num_rows() - 1 && map[(location.0 + 1, location.1)] == val &&
-                location.1 > 0 && map[(location.0, location.1 - 1)] == val &&
-                map[(location.0 + 1, location.1 - 1)] != val {
-                corner_count += 1;
-            }
-
-            if location.0 < map.num_rows() - 1 && map[(location.0 + 1, location.1)] == val &&
-                location.1 < map.num_columns() - 1 && map[(location.0, location.1 + 1)] == val &&
-                map[(location.0 + 1, location.1 + 1)] != val {
-                corner_count += 1;
+                // Inside corner
+                if locations.contains(&(*location + corner.0)) &&
+                    locations.contains(&(*location + corner.1)) &&
+                    !locations.contains(&(*location + corner.2)) {
+                    corner_count += 1;
+                }
             }
         }
         price += area * corner_count;
