@@ -1,32 +1,29 @@
-use array2d::Array2D;
 use std::error::Error;
 use std::fs;
 
 #[derive(Debug, Clone)]
 struct Problem {
-    buttons: Array2D<i64>,
-    prize: Array2D<i64>,
+    button_a: [i64; 2],
+    button_b: [i64; 2],
+    prize: [i64; 2],
 }
 
 
 fn count_tokens(problems: &Vec<Problem>, factor: i64) {
     let mut cost = 0;
     for problem in problems {
-        // For matrix
-        // |ax bx|
-        // |ay by|
-        
-        // Calculate determinant (ax * by - bx * ay)
-        let determinant = problem.buttons[(0, 0)] * problem.buttons[(1, 1)] -
-            problem.buttons[(0, 1)] * problem.buttons[(1, 0)];
+
+        // Calculate determinant (ax * by - ay * bx)
+        let determinant = problem.button_a[0] * problem.button_b[1] -
+            problem.button_a[1] * problem.button_b[0];
 
         // Calculate partial solution
         // (by * x - bx * y)
-        let a_factor = problem.buttons[(1, 1)] * (factor + problem.prize[(0, 0)]) -
-            problem.buttons[(0, 1)] * (factor + problem.prize[(1, 0)]);
+        let a_factor = problem.button_b[1] * (factor + problem.prize[0]) -
+            problem.button_b[0] * (factor + problem.prize[1]);
         // (-ay * x + ax * y)
-        let b_factor = -problem.buttons[(1, 0)] * (factor + problem.prize[(0, 0)]) +
-            problem.buttons[(0, 0)] * (factor + problem.prize[(1, 0)]);
+        let b_factor = -problem.button_a[1] * (factor + problem.prize[0]) +
+            problem.button_a[0] * (factor + problem.prize[1]);
 
         // Check partial solution is (integer) divisible by the determinant
         if (a_factor % determinant == 0) && (b_factor % determinant == 0) {
@@ -38,6 +35,14 @@ fn count_tokens(problems: &Vec<Problem>, factor: i64) {
 }
 
 
+fn get_values(s: &str) -> [i64; 2] {
+    s.split(',')
+        .map(|s| s.trim_start()[2..].parse().unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap()
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Read in example
@@ -45,21 +50,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut problems = Vec::new();
     for chunk in file_str.lines().collect::<Vec<&str>>().iter().as_slice().chunks(4) {
-        let lr = chunk[0][10..].split(',').map(|s| s.trim_start()).collect::<Vec<&str>>();
-        let ax = lr[0][2..].parse::<i64>().unwrap();
-        let ay = lr[1][2..].parse::<i64>().unwrap();
-
-        let lr = chunk[1][10..].split(',').map(|s| s.trim_start()).collect::<Vec<&str>>();
-        let bx = lr[0][2..].parse::<i64>().unwrap();
-        let by = lr[1][2..].parse::<i64>().unwrap();
-
-        let lr = chunk[2][7..].split(',').map(|s| s.trim_start()).collect::<Vec<&str>>();
-        let px = lr[0][2..].parse::<i64>().unwrap();
-        let py = lr[1][2..].parse::<i64>().unwrap();
-
         problems.push(Problem {
-            buttons: Array2D::from_row_major(&[ax, bx, ay, by], 2, 2).unwrap(),
-            prize: Array2D::from_row_major(&[px, py], 2, 1).unwrap(),
+            button_a: get_values(&chunk[0][10..]),
+            button_b: get_values(&chunk[1][10..]),
+            prize: get_values(&chunk[2][7..]),
         });
     }
 
