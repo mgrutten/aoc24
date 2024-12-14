@@ -8,6 +8,15 @@ struct State {
     vel: [i64; 2],
 }
 
+impl State {
+    fn predict_position(&self, time: i64, x_width: i64, y_width: i64) -> [i64; 2] {
+        let new_x = i64_mod(self.pos[0] + time * self.vel[0], x_width);
+        let new_y = i64_mod(self.pos[1] + time * self.vel[1], y_width);
+
+        [new_x, new_y]
+    }
+}
+
 fn i64_mod(x: i64, v: i64) -> i64 {
     ((x % v) + v) % v
 }
@@ -15,9 +24,8 @@ fn i64_mod(x: i64, v: i64) -> i64 {
 fn part1(robots: &Vec<State>, steps: i64, x_width: i64, y_width: i64) {
     let mut new_locations = Vec::new();
     for robot in robots {
-        let new_x = i64_mod(robot.pos[0] + steps * robot.vel[0], x_width);
-        let new_y = i64_mod(robot.pos[1] + steps * robot.vel[1], y_width);
-        new_locations.push([new_x, new_y]);
+        let new_pos = robot.predict_position(steps, x_width, y_width);
+        new_locations.push(new_pos);
     }
 
     let mut counts = [0_u64; 4];
@@ -43,12 +51,11 @@ fn part2(robots: &Vec<State>, x_width: i64, y_width: i64) {
     loop {
         new_locations.clear();
         for robot in robots {
-            let new_x = i64_mod(robot.pos[0] + steps * robot.vel[0], x_width);
-            let new_y = i64_mod(robot.pos[1] + steps * robot.vel[1], y_width);
-            if new_locations.contains(&[new_x, new_y]) {
+            let new_pos = robot.predict_position(steps, x_width, y_width);
+            if new_locations.contains(&new_pos) {
                 break;
             }
-            new_locations.insert([new_x, new_y]);
+            new_locations.insert(new_pos);
         }
 
         // Check for robots in distinct locations
