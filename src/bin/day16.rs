@@ -1,5 +1,6 @@
 use array2d::Array2D;
-use std::collections::{HashMap, VecDeque};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::error::Error;
 use std::{fmt, fs};
 
@@ -9,6 +10,7 @@ enum MapContent {
     Empty,
     Start,
     End,
+    Visited,
 }
 
 impl fmt::Display for MapContent {
@@ -18,6 +20,7 @@ impl fmt::Display for MapContent {
             MapContent::Start => write!(f, "S"),
             MapContent::End => write!(f, "E"),
             MapContent::Empty => write!(f, "."),
+            MapContent::Visited => write!(f, "O"),
         }
     }
 }
@@ -51,199 +54,139 @@ fn find_start(map: &Array2D<MapContent>) -> (usize, usize) {
         .unwrap().0
 }
 
-/*
-fn explore(map: &Array2D<MapContent>,
-           state: &State,
-           visited: &mut HashSet<State>,
-           min_cost: &mut u64,
-           current_cost: &mut u64,
-           current_path: &mut Vec<State>) {
-    visited.insert(state.clone());
 
-    // println!("{:?}", current_path);
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct CostState {
+    cost: u64,
+    state: State,
+}
 
-    if map[state.location] == MapContent::End {
-        println!("got to end {}", current_cost);
-        if current_cost < min_cost {
-            *min_cost = *current_cost;
+impl Ord for CostState {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost) // Reverse order for min-heap
+    }
+}
+
+impl PartialOrd for CostState {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn collect_visited_locations(
+    location: &(usize, usize),
+    previous: &HashMap<(usize, usize), Vec<(usize, usize)>>,
+    visited_locations: &mut HashSet<(usize, usize)>,
+) {
+    let mut stack = vec![location.clone()];
+    let mut visited = HashSet::new();
+
+    while let Some(current) = stack.pop() {
+        if visited.insert(current) {
+            visited_locations.insert(current);
+
+            if let Some(prev_states) = previous.get(&current) {
+                for prev in prev_states.iter() {
+                    stack.push(prev.clone());
+                }
+            }
         }
-    } else {
-        // Try each move
-        let forward = match state.direction {
-            Direction::East => State {
-                location: (state.location.0, state.location.1 + 1),
-                direction: state.direction.clone(),
-            },
-            Direction::West => State {
-                location: (state.location.0, state.location.1 - 1),
-                direction: state.direction.clone(),
-            },
-            Direction::North => State {
-                location: (state.location.0 - 1, state.location.1),
-                direction: state.direction.clone(),
-            },
-            Direction::South => State {
-                location: (state.location.0 + 1, state.location.1),
-                direction: state.direction.clone(),
-            },
+    }
+}
+
+fn explore(map: &Array2D<MapContent>,
+           start_state: &State,
+           min_cost: &mut u64,
+           visited_locations: &mut HashSet<(usize, usize)>) {
+    let mut heap = BinaryHeap::new();
+    let mut distances = HashMap::new();
+    let mut previous = HashMap::<(usize, usize), Vec<(usize, usize)>>::new();
+
+    distances.insert(start_state.clone(), 0);
+    heap.push(CostState { cost: 0, state: start_state.clone() });
+
+    while let Some(CostState { cost: current_cost, state: current_state }) = heap.pop() {
+        if current_cost > *min_cost {
+            continue;
+        }
+
+        if map[current_state.location] == MapContent::End {
+            if current_cost < *min_cost {
+                *min_cost = current_cost;
+                visited_locations.clear();
+            }
+
+            if current_cost == *min_cost {
+                collect_visited_locations(&current_state.location, &previous, visited_locations);
+            }
+            continue;
+        }
+
+        if let Some(&dist) = distances.get(&current_state) {
+            if current_cost > dist {
+                continue;
+            }
+        }
+
+        let new_location = match current_state.direction {
+            Direction::East => (current_state.location.0, current_state.location.1 + 1),
+            Direction::West => (current_state.location.0, current_state.location.1 - 1),
+            Direction::North => (current_state.location.0 - 1, current_state.location.1),
+            Direction::South => (current_state.location.0 + 1, current_state.location.1),
+        };
+        let forward = State {
+            location: new_location,
+            direction: current_state.direction.clone(),
         };
 
-        // Try moving forward
-        if !visited.contains(&forward) &&
-            (map[forward.location] == MapContent::Empty || map[forward.location] == MapContent::End) {
-            *current_cost += 1;
-            if current_cost < min_cost {
-                current_path.push(forward.clone());
-                explore(map, &forward, visited, min_cost, current_cost, current_path);
-                current_path.pop();
+        if map[forward.location] == MapContent::Empty || map[forward.location] == MapContent::End {
+            let new_cost = current_cost + 1;
+            if new_cost <= *distances.get(&forward).unwrap_or(&u64::MAX) {
+                distances.insert(forward.clone(), new_cost);
+                previous.entry(forward.location).or_insert_with(Vec::new).push(current_state.location);
+                heap.push(CostState { cost: new_cost, state: forward });
             }
-            *current_cost -= 1;
         }
 
-        // Only turn once
-        if current_path.len() < 2 ||
-            current_path[current_path.len() - 2].location != current_path[current_path.len() - 1].location {
-            // Turn left
-            let new_direction = match state.direction {
+        // Turn left
+        {
+            let new_direction = match current_state.direction {
                 Direction::East => Direction::North,
                 Direction::West => Direction::South,
                 Direction::North => Direction::West,
                 Direction::South => Direction::East,
             };
-            *current_cost += 1000;
-            if current_cost < min_cost {
-                let new_state = State {
-                    location: state.location,
-                    direction: new_direction,
-                };
-                current_path.push(new_state.clone());
-                explore(map, &new_state, visited, min_cost, current_cost, current_path);
-                current_path.pop();
+            let new_cost = current_cost + 1000;
+            let new_state = State {
+                location: current_state.location,
+                direction: new_direction,
+            };
+            if new_cost <= *distances.get(&new_state).unwrap_or(&u64::MAX) {
+                distances.insert(new_state.clone(), new_cost);
+                heap.push(CostState { cost: new_cost, state: new_state });
             }
-            *current_cost -= 1000;
+        }
 
-            // Turn Right
-            let new_direction = match state.direction {
+        // Turn Right
+        {
+            let new_direction = match current_state.direction {
                 Direction::East => Direction::South,
                 Direction::West => Direction::North,
                 Direction::North => Direction::East,
                 Direction::South => Direction::West,
             };
-            *current_cost += 1000;
-            if current_cost < min_cost {
-                let new_state = State {
-                    location: state.location,
-                    direction: new_direction,
-                };
-                current_path.push(new_state.clone());
-                explore(map, &new_state, visited, min_cost, current_cost, current_path);
-                current_path.pop();
-            }
-            *current_cost -= 1000;
-        }
-    }
-
-    visited.remove(state);
-}
-
- */
-
-fn explore(
-    map: &Array2D<MapContent>,
-    start: &State) -> u64 {
-    let mut visited = HashMap::new();
-    let mut min_cost = u64::MAX;
-
-    let mut stack = VecDeque::new();
-    stack.push_back((start.clone(), 0, vec![start.clone()]));
-
-    while let Some((current_state, current_cost, current_path)) = stack.pop_back() {
-        if let Some(&prev_cost) = visited.get(&current_state) {
-            if current_cost >= prev_cost {
-                continue;
-            }
-        }
-        visited.insert(current_state.clone(), current_cost);
-
-        if map[current_state.location] == MapContent::End {
-            if current_cost < min_cost {
-                min_cost = current_cost;
-            }
-        } else {
-            let forward = match current_state.direction {
-                Direction::East => State {
-                    location: (current_state.location.0, current_state.location.1 + 1),
-                    direction: current_state.direction.clone(),
-                },
-                Direction::West => State {
-                    location: (current_state.location.0, current_state.location.1 - 1),
-                    direction: current_state.direction.clone(),
-                },
-                Direction::North => State {
-                    location: (current_state.location.0 - 1, current_state.location.1),
-                    direction: current_state.direction.clone(),
-                },
-                Direction::South => State {
-                    location: (current_state.location.0 + 1, current_state.location.1),
-                    direction: current_state.direction.clone(),
-                },
+            let new_cost = current_cost + 1000;
+            let new_state = State {
+                location: current_state.location,
+                direction: new_direction,
             };
-
-            if map[forward.location] == MapContent::Empty || map[forward.location] == MapContent::End {
-                if current_cost + 1 < min_cost {
-                    let mut new_path = current_path.clone();
-                    new_path.push(forward.clone());
-                    stack.push_back((forward, current_cost + 1, new_path));
-                }
-            }
-
-            if current_path.len() < 2
-                || current_path[current_path.len() - 2].location
-                != current_path[current_path.len() - 1].location {
-
-                // Turn left
-                let new_direction = match current_state.direction {
-                    Direction::East => Direction::North,
-                    Direction::West => Direction::South,
-                    Direction::North => Direction::West,
-                    Direction::South => Direction::East,
-                };
-                if current_cost + 1000 < min_cost {
-                    let new_state = State {
-                        location: current_state.location,
-                        direction: new_direction,
-                    };
-                    let mut new_path = current_path.clone();
-                    new_path.push(new_state.clone());
-                    stack.push_back((new_state, current_cost + 1000, new_path));
-                }
-
-                // Turn Right
-                let new_direction = match current_state.direction {
-                    Direction::East => Direction::South,
-                    Direction::West => Direction::North,
-                    Direction::North => Direction::East,
-                    Direction::South => Direction::West,
-                };
-                if current_cost + 1000 < min_cost {
-                    let new_state = State {
-                        location: current_state.location,
-                        direction: new_direction,
-                    };
-                    let mut new_path = current_path.clone();
-                    new_path.push(new_state.clone());
-                    stack.push_back((new_state, current_cost + 1000, new_path));
-                }
-
+            if new_cost <= *distances.get(&new_state).unwrap_or(&u64::MAX) {
+                distances.insert(new_state.clone(), new_cost);
+                heap.push(CostState { cost: new_cost, state: new_state });
             }
         }
-
-        // visited.remove(&current_state);
     }
-
-    min_cost
 }
-
 
 fn part1(map: &Array2D<MapContent>) {
     let start = State {
@@ -251,17 +194,25 @@ fn part1(map: &Array2D<MapContent>) {
         direction: Direction::East,
     };
 
-    //let mut min_cost = u64::MAX;
-    //let mut current_cost = 0;
-    //let mut current_path = vec![start.clone()];
-    let min_cost = explore(map, &start);
-    println!("Part 1: {}", min_cost);
+    let mut min_cost = u64::MAX;
+    let mut visited_locations = HashSet::new();
+    explore(map, &start, &mut min_cost, &mut visited_locations);
+    println!("Part 1: {}, {}", min_cost, visited_locations.len());
+
+    //let mut mut_map = map.clone();
+    //let check_empty = visited_locations.iter()
+    //    .all(|loc| map[*loc] != MapContent::Wall);
+    //println!("Part 1: {}", check_empty);
+
+    //visited_locations.iter()
+    //    .for_each(|loc| mut_map[*loc] = MapContent::Visited);
+    //print_map(&mut_map);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Read in example
-    let file_str: String = fs::read_to_string("data/day16/day16.txt")?;
+    let file_str: String = fs::read_to_string("data/day16/day16-example.txt")?;
 
     let map_vec = file_str.lines()
         .map(|line| line.chars()
@@ -276,7 +227,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect::<Vec<_>>();
 
     let map = Array2D::from_rows(&map_vec).unwrap();
-    //print_map(&map);
 
     part1(&map);
 
