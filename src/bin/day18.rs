@@ -89,7 +89,7 @@ fn part1(map: &Array2D<u8>) {
     println!("Part 1: {}", min_cost);
 }
 
-
+/*
 fn print_map(map: &Array2D<u8>) {
     for row in 0..map.num_rows() {
         for col in 0..map.num_columns() {
@@ -98,7 +98,17 @@ fn print_map(map: &Array2D<u8>) {
         println!();
     }
 }
+ */
 
+
+fn fill_map(map: &Array2D<u8>,
+            coords: &Vec<(usize, usize)>,
+            num_coords: usize) -> Array2D<u8> {
+    let mut map_clone = map.clone();
+    coords.iter().take(num_coords).for_each(|c| map_clone[*c] = 1);
+
+    map_clone
+}
 
 fn part2(coords: &Vec<(usize, usize)>) {
     let max_row = coords.iter().map(|r| r.0).max().unwrap();
@@ -107,18 +117,23 @@ fn part2(coords: &Vec<(usize, usize)>) {
     let start = (0, 0);
     let end = (max_row, max_col);
 
-    let mut map = Array2D::filled_by_row_major(|| 0, max_row + 1, max_col + 1);
-    coords.iter().take(1024).for_each(|c| map[*c] = 1);
+    let map = Array2D::filled_by_row_major(|| 0_u8, max_row + 1, max_col + 1);
 
-    for (index, coord) in coords.iter().enumerate().skip(1024) {
-        map[*coord] = 1;
-        let min_cost = explore(&map, start, end);
+    let mut left = 1024;
+    let mut right = coords.len();
+    while left < right {
+        let mid = (left + right) / 2;
+        let mid_map = fill_map(&map, coords, mid);
+        let min_cost = explore(&mid_map, start, end);
 
-        if min_cost as usize > max_row * max_col {
-            println!("Part 2: {}, {}, {:?}", index, min_cost, coord);
-            break;
+        if min_cost > (max_row * max_col) as u64 {
+            right = mid;
+        } else {
+            left = mid + 1;
         }
     }
+
+    println!("Part 2: {:?}", coords[left - 1]);
 }
 
 
