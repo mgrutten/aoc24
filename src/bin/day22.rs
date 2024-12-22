@@ -28,20 +28,21 @@ fn part2(secrets: &Vec<u64>) {
     let mut patterns = HashMap::new();
 
     for secret in secrets {
-        let mut digits = Vec::new();
         let mut num = *secret;
-        digits.push((num % 10) as i8);
-        for _ in 0..2000 {
-            num = gen_next(num);
-            digits.push((num % 10) as i8);
-        }
-        let diffs = digits.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
 
         let mut unique = HashSet::new();
-        for idx in 0..=diffs.len() - 4 {
-            let seq = &diffs[idx..idx + 4];
-            if unique.insert(seq.to_vec()) {
-                *patterns.entry(seq.to_vec()).or_insert(0) += digits[idx + 4] as u64;
+        let mut diffs = [0_i8; 4];
+        for idx in 0..2000 {
+            let last = (num % 10) as i8;
+            num = gen_next(num);
+
+            diffs.rotate_left(1);
+            let curr = (num % 10) as i8;
+            diffs[3] = curr - last;
+            if idx >= 3 {
+                if unique.insert(diffs) {
+                    *patterns.entry(diffs).or_insert(0) += curr as u64;
+                }
             }
         }
     }
@@ -57,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Read in example
     let file_str: String = fs::read_to_string("data/day22/day22.txt")?;
-    
+
     let secrets = file_str.lines()
         .map(|line| line.parse::<u64>().unwrap())
         .collect::<Vec<_>>();
