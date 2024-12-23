@@ -34,54 +34,44 @@ fn part1(connected: &HashMap<[char; 2], HashSet<[char; 2]>>) {
 
 
 fn part2(connected: &HashMap<[char; 2], HashSet<[char; 2]>>) {
-    let current_clique = HashSet::new();
-    let potential = connected.keys().cloned().collect();
-    let excluded = HashSet::new();
+    let mut visited = HashSet::new();
+    let mut max_clique = HashSet::new();
 
-    let max_clique = bron_kerbosch(&connected, &current_clique, &potential, &excluded);
+    for key in connected.keys() {
+        // Check key wasn't in previous clique
+        if visited.contains(key) {
+            continue;
+        }
 
+        // Find clique containing key
+        let mut current_clique = HashSet::new();
+        current_clique.insert(*key);
+
+        let neighbours = connected.get(key).unwrap()
+            .difference(&visited)
+            .collect::<HashSet<_>>();
+        for node in neighbours {
+            if connected.get(node).unwrap().is_superset(&current_clique) {
+                current_clique.insert(*node);
+            }
+        }
+
+        // Add clique to visited nodes
+        visited.extend(&current_clique);
+
+        // Check for max clique
+        if current_clique.len() > max_clique.len() {
+            max_clique = current_clique;
+        }
+    }
+
+    // Print max clique members in sorted order
     let mut sorted_clique = max_clique.into_iter().collect::<Vec<_>>();
     sorted_clique.sort();
 
     print!("Part 2: ");
     sorted_clique.iter().for_each(|&x| print!("{}{},", x[0], x[1]));
     println!();
-}
-
-fn bron_kerbosch(
-    graph: &HashMap<[char; 2], HashSet<[char; 2]>>,
-    current_clique: &HashSet<[char; 2]>,
-    potential_nodes: &HashSet<[char; 2]>,
-    excluded_nodes: &HashSet<[char; 2]>,
-) -> HashSet<[char; 2]> {
-    if potential_nodes.is_empty() && excluded_nodes.is_empty() {
-        return current_clique.clone();
-    }
-
-    let mut max_clique = current_clique.clone();
-
-    let mut potential_nodes = potential_nodes.clone();
-    let mut excluded_nodes = excluded_nodes.clone();
-
-    for node in potential_nodes.clone() {
-        let mut new_clique = current_clique.clone();
-        new_clique.insert(node);
-
-        let neighbors = &graph[&node];
-        let new_potential = potential_nodes.intersection(neighbors).cloned().collect::<HashSet<_>>();
-        let new_excluded = excluded_nodes.intersection(neighbors).cloned().collect::<HashSet<_>>();
-
-        let clique = bron_kerbosch(graph, &new_clique, &new_potential, &new_excluded);
-
-        if clique.len() > max_clique.len() {
-            max_clique = clique;
-        }
-
-        potential_nodes.remove(&node);
-        excluded_nodes.insert(node);
-    }
-
-    max_clique
 }
 
 
