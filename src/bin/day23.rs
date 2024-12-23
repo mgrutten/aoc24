@@ -16,20 +16,14 @@ fn find_pairs(set: &HashSet<[char; 2]>) -> Vec<([char; 2], [char; 2])> {
 }
 
 
-fn part1(connections: &Vec<Vec<[char; 2]>>) {
-    let mut connected = HashMap::new();
-    for connection in connections {
-        connected.entry(connection[0]).or_insert(HashSet::new()).insert(connection[1]);
-        connected.entry(connection[1]).or_insert(HashSet::new()).insert(connection[0]);
-    }
-
+fn part1(connected: &HashMap<[char; 2], HashSet<[char; 2]>>) {
     let mut triplets = HashSet::new();
     for key in connected.keys() {
         for (first, second) in find_pairs(&connected.get(key).unwrap()) {
             if connected.get(&first).unwrap().contains(&second) &&
                 (key[0] == 't' || first[0] == 't' || second[0] == 't') {
                 let mut sorted_triplet = [*key, first, second];
-                sorted_triplet.sort_by(|a, b| a.cmp(&b));
+                sorted_triplet.sort();
                 triplets.insert((sorted_triplet[0], sorted_triplet[1], sorted_triplet[2]));
             }
         }
@@ -39,18 +33,12 @@ fn part1(connections: &Vec<Vec<[char; 2]>>) {
 }
 
 
-fn part2(connections: &Vec<Vec<[char; 2]>>) {
-    let mut connected = HashMap::new();
-    for connection in connections {
-        connected.entry(connection[0]).or_insert(HashSet::new()).insert(connection[1]);
-        connected.entry(connection[1]).or_insert(HashSet::new()).insert(connection[0]);
-    }
+fn part2(connected: &HashMap<[char; 2], HashSet<[char; 2]>>) {
+    let current_clique = HashSet::new();
+    let potential = connected.keys().cloned().collect();
+    let excluded = HashSet::new();
 
-    let mut r = HashSet::new();
-    let mut p = connected.keys().cloned().collect();
-    let mut x = HashSet::new();
-
-    let max_clique = bron_kerbosch(&connected, &mut r, &mut p, &mut x);
+    let max_clique = bron_kerbosch(&connected, &current_clique, &potential, &excluded);
 
     let mut sorted_clique = max_clique.into_iter().collect::<Vec<_>>();
     sorted_clique.sort();
@@ -74,7 +62,7 @@ fn bron_kerbosch(
 
     let mut potential_nodes = potential_nodes.clone();
     let mut excluded_nodes = excluded_nodes.clone();
-    
+
     for node in potential_nodes.clone() {
         let mut new_clique = current_clique.clone();
         new_clique.insert(node);
@@ -84,7 +72,7 @@ fn bron_kerbosch(
         let new_excluded = excluded_nodes.intersection(neighbors).cloned().collect::<HashSet<_>>();
 
         let clique = bron_kerbosch(graph, &new_clique, &new_potential, &new_excluded);
-        
+
         if clique.len() > max_clique.len() {
             max_clique = clique;
         }
@@ -110,8 +98,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    part1(&connections);
-    part2(&connections);
+    let mut connected = HashMap::new();
+    for connection in connections {
+        connected.entry(connection[0]).or_insert(HashSet::new()).insert(connection[1]);
+        connected.entry(connection[1]).or_insert(HashSet::new()).insert(connection[0]);
+    }
+
+    part1(&connected);
+    part2(&connected);
 
     Ok(())
 }
