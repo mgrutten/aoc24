@@ -72,24 +72,25 @@ fn bron_kerbosch(
 
     let mut max_clique = current_clique.clone();
 
-    let p_union_x = potential_nodes.union(excluded_nodes).cloned().collect::<HashSet<_>>();
-    let pivot = *p_union_x.iter().next().unwrap();
-    let pivot_neighbors = &graph[&pivot];
-    let potential_without_neighbors = potential_nodes.difference(pivot_neighbors).cloned().collect::<HashSet<_>>();
-
-    for node in potential_without_neighbors {
+    let mut potential_nodes = potential_nodes.clone();
+    let mut excluded_nodes = excluded_nodes.clone();
+    
+    for node in potential_nodes.clone() {
         let mut new_clique = current_clique.clone();
         new_clique.insert(node);
-        
+
         let neighbors = &graph[&node];
         let new_potential = potential_nodes.intersection(neighbors).cloned().collect::<HashSet<_>>();
         let new_excluded = excluded_nodes.intersection(neighbors).cloned().collect::<HashSet<_>>();
-        
-        let clique = bron_kerbosch(graph, &new_clique, &new_potential, &new_excluded);
 
+        let clique = bron_kerbosch(graph, &new_clique, &new_potential, &new_excluded);
+        
         if clique.len() > max_clique.len() {
             max_clique = clique;
         }
+
+        potential_nodes.remove(&node);
+        excluded_nodes.insert(node);
     }
 
     max_clique
